@@ -1,0 +1,12 @@
+*.DS_Store
+/.idea/
+/app/release/
+/captures/
+/build/
+/app/build/
+local.properties
+*.apk
+.gradle/
+/MoneroMiner.iml
+/MoneroMiner-master.iml
+/app/app.iml
