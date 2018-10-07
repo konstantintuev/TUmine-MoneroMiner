@@ -51,7 +51,7 @@ class MainActivity : AppCompatActivity() {
 
         infoPassing = InfoPassing(this@MainActivity)
 
-        infoPassing.smartStart = true
+        infoPassing.smartStart = false
 
         val cores = infoPassing.availableThreads
         // write suggested cores usage into editText
