@@ -18,3 +18,4 @@ This app's package name is already registered as paid and you will receive 95% o
 
 The source files are made available under the terms of the [MIT License](LICENSE.md) - the best license!
 
+NOTE: The precompiled native and kotlin binaries are not under the MIT License and without a purchase of the whole source code of the miner no permission is given to anyone to edit, modify or redistribute these binaries.
