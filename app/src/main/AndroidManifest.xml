@@ -28,8 +28,6 @@
             </intent-filter>
         </activity>
 
-        <service android:name="tuev.co.tumine.MiningService"/>
-
     </application>
 
 </manifest>

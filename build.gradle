@@ -8,7 +8,7 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.2.0'
+        classpath 'com.android.tools.build:gradle:3.2.1'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath "org.jetbrains.kotlin:kotlin-android-extensions:$kotlin_version"
 
@@ -18,11 +18,26 @@ buildscript {
 }
 
 allprojects {
+    //TODO: Remove this, I have added this check only because I mainly test/work on my LAN network
+    //TODO: You should only use -> url 'https://maven.tuev-co.eu/repository/internal'
+    def code = 404
+    try {
+        code = new URL('http://192.168.100.200:8989/repository/internal').openConnection().with {
+            requestMethod = 'HEAD'
+            connect()
+            responseCode
+        }
+    } catch (ignored) {}
+
+    String mavenURL = "https://maven.tuev-co.eu/repository/internal"
+    if (code ==  HttpURLConnection.HTTP_OK) {
+        mavenURL = "http://192.168.100.200:8989/repository/internal"
+    }
     repositories {
         google()
         jcenter()
-        flatDir {
-            dirs 'libs'
+        maven {
+            url mavenURL
         }
     }
 }

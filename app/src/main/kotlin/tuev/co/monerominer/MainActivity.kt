@@ -1,9 +1,6 @@
 package tuev.co.monerominer
 
 import android.annotation.SuppressLint
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.Color
@@ -11,11 +8,14 @@ import android.graphics.Typeface
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
 import android.preference.PreferenceManager
-import android.support.v4.app.NotificationCompat
 import android.support.v7.app.AlertDialog
 import android.support.v7.app.AppCompatActivity
-import android.text.*
+import android.text.Editable
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.TextWatcher
 import android.text.style.ForegroundColorSpan
 import android.text.style.RelativeSizeSpan
 import android.text.style.StyleSpan
@@ -27,7 +27,6 @@ import kotlinx.android.synthetic.main.activity_main.*
 import tuev.co.tumine.*
 import java.lang.reflect.Modifier
 import java.util.*
-import kotlin.collections.ArrayList
 import kotlin.reflect.full.memberProperties
 
 class MainActivity : AppCompatActivity() {
@@ -51,9 +50,7 @@ class MainActivity : AppCompatActivity() {
 
         infoPassing = InfoPassing(this@MainActivity)
 
-        infoPassing.smartStart = false
-
-        val cores = infoPassing.availableThreads
+        val cores = infoPassing.availableCores
         // write suggested cores usage into editText
         var suggested = if (preferences.contains("threads")) preferences.getInt("threads", 0) else cores / 2
         if (preferences.contains("username")) {
@@ -113,6 +110,57 @@ class MainActivity : AppCompatActivity() {
                 .show()
         updateOutputInfo(true)
 
+        addMineConnector()
+
+        //InfoPassing.startMiningServiceRestoreState(this)
+
+    }
+
+    private fun addMineConnector() {
+        if (mineConnector == null) {
+            mineConnector = MineConnector(object : OnMessageReceived {
+                override fun connected() {
+                    Toast.makeText(this@MainActivity, "Connected to Miner", Toast.LENGTH_LONG).show()
+                }
+
+                override fun messageReceived(message: OutputInfo) {
+                    mOutputInfo = message
+                    Log.wtf("recv", "messageReceived")
+                    when (message.lastChangedValue) {
+                        OutputHelperClasses.ChangedValue.hashrate -> {
+                            speed.text = message.hashrate?.Highest?.toString() ?: "0"
+                        }
+                        OutputHelperClasses.ChangedValue.lastMiningJobResult -> {
+                            accepted.text = message.lastMiningJobResult?.accepted?.toString() ?: "0"
+                        }
+                    }
+
+                    for (prop in OutputInfo::class.memberProperties) {
+                        if (prop.name == message.lastChangedValue?.name) {
+                            val view = outputInfoTextViews[prop.name] ?: break
+                            if (message.lastChangedValue == OutputHelperClasses.ChangedValue.lastMiningJobResult
+                                    || message.lastChangedValue == OutputHelperClasses.ChangedValue.lastMiningJob
+                                    || message.lastChangedValue == OutputHelperClasses.ChangedValue.lastError) {
+                                scroll_view.post {
+                                    scroll_view.smoothScrollTo(0, view.bottom)
+                                }
+                            }
+                            view.setText(reflectionToString(prop.name, prop.get(mOutputInfo)), TextView.BufferType.SPANNABLE)
+                            val builder = SpannableStringBuilder()
+                            var start = builder.length
+                            builder.append("LastChangedValue:\n")
+                            builder.setSpan(ForegroundColorSpan(green), start, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                            builder.setSpan(RelativeSizeSpan(1.4f), start, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                            start = builder.length
+                            builder.append("${prop.name}\n")
+                            builder.setSpan(ForegroundColorSpan(blgray), start, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                            outputInfoTextViews["lastChangedValue"]?.setText(builder, TextView.BufferType.SPANNABLE)
+                            break
+                        }
+                    }
+                }
+            }, this, false)
+        }
     }
 
     private fun updateOutputInfo(create: Boolean) {
@@ -140,7 +188,6 @@ class MainActivity : AppCompatActivity() {
     private val green: Int = Color.parseColor("#4CAF50")
     private val blue: Int = Color.parseColor("#03A9F4")
     private val blgray: Int = Color.parseColor("#CFD8DC")
-    private val red: Int = Color.parseColor("#f44336")
 
     fun reflectionToString(propName: String, obj: Any?): SpannableStringBuilder {
         val builder = SpannableStringBuilder()
@@ -257,80 +304,27 @@ class MainActivity : AppCompatActivity() {
             return
         }
         running = true
-        if (mineConnector == null) {
-            mineConnector = MineConnector(object : OnMessageReceived {
-                override fun connected() {
-                    Toast.makeText(this@MainActivity, "Connected to Miner", Toast.LENGTH_LONG).show()
-                }
+        infoPassing.minerConfig.pools.add(Pool(pool.text.toString(), username.text.toString(), password.text.toString()))
+        //infoPassing.pools.add(Pool("killallasics.moneroworld.com:3333", "9v4vTVwqZzfjCFyPi7b9Uv1hHntJxycC4XvRyEscqwtq8aycw5xGpTxFyasurgf2KRBfbdAJY4AVcemL1JCegXU4EZfMtaz", "oneplus"))
+        infoPassing.minerConfig.coresToUse = Integer.parseInt(threads.text.toString())
+        infoPassing.minerConfig.coresWhenInAJob = if (infoPassing.availableCores / 4 < 1) 1 else infoPassing.availableCores / 4
+        infoPassing.minerConfig.updateOverInternet = false
+        infoPassing.minerOutput.debugParams = true
+        infoPassing.minerConfig.useSSL = true
+        infoPassing.miningInAndroid.keepCPUawake = true
+        infoPassing.miningInAndroid.checkIfRunningEvery5mins = true
 
-                override fun messageReceived(message: OutputInfo) {
-                    mOutputInfo = message
-                    Log.wtf("recv", "messageReceived")
-                    when (message.lastChangedValue) {
-                        OutputHelperClasses.ChangedValue.hashrate -> {
-                            speed.text = message.hashrate?.Highest?.toString() ?: "0"
-                        }
-                        OutputHelperClasses.ChangedValue.lastMiningJobResult -> {
-                            accepted.text = message.lastMiningJobResult?.accepted?.toString() ?: "0"
-                        }
-                    }
 
-                    for (prop in OutputInfo::class.memberProperties) {
-                        if (prop.name == message.lastChangedValue?.name) {
-                            val view = outputInfoTextViews[prop.name] ?: break
-                            if (message.lastChangedValue == OutputHelperClasses.ChangedValue.lastMiningJobResult
-                                    || message.lastChangedValue == OutputHelperClasses.ChangedValue.lastMiningJob
-                                    || message.lastChangedValue == OutputHelperClasses.ChangedValue.lastError) {
-                                scroll_view.post {
-                                    scroll_view.smoothScrollTo(0, view.bottom)
-                                }
-                            }
-                            view.setText(reflectionToString(prop.name, prop.get(mOutputInfo)), TextView.BufferType.SPANNABLE)
-                            val builder = SpannableStringBuilder()
-                            var start = builder.length
-                            builder.append("LastChangedValue:\n")
-                            builder.setSpan(ForegroundColorSpan(green), start, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                            builder.setSpan(RelativeSizeSpan(1.4f), start, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                            start = builder.length
-                            builder.append("${prop.name}\n")
-                            builder.setSpan(ForegroundColorSpan(blgray), start, builder.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                            outputInfoTextViews["lastChangedValue"]?.setText(builder, TextView.BufferType.SPANNABLE)
-                            break
-                        }
-                    }
-                }
-            }, this, infoPassing)
-        }
-        infoPassing.pools = ArrayList()
-        infoPassing.pools.add(Pool(pool.text.toString(), username.text.toString(), password.text.toString()))
-        infoPassing.threadsToUse = Integer.parseInt(threads.text.toString())
-        infoPassing.updateOverInternet = false
-        infoPassing.debugParams = true
-        //infoPassing.cpuPriority = 5
-        val channelId2 = "miner_info"
-        val mNotifyManager: NotificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val notificationChannelRetr2: NotificationChannel?
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            notificationChannelRetr2 = mNotifyManager.getNotificationChannel(channelId2)
-            if (notificationChannelRetr2 == null) {
-                val notificationChannel: NotificationChannel
-                val channelName = "Info"
-                val importance = NotificationManager.IMPORTANCE_MIN
-                notificationChannel = NotificationChannel(channelId2, channelName, importance)
-                notificationChannel.enableLights(false)
-                notificationChannel.enableVibration(false)
-                mNotifyManager.createNotificationChannel(notificationChannel)
-            }
-        }
-        val notification = NotificationCompat.Builder(this@MainActivity, channelId2)
-                .setSmallIcon(R.mipmap.ic_launcher)
-                .setContentTitle("Info")
-                .setContentText("This mines XMR for the hardworking devs").build()
-        infoPassing.notification = notification
-        infoPassing.isBasicLogging = true
+        //infoPassing.questionableUsefulness.cpuPriority = 5
+        //infoPassing.questionableUsefulness.cpuAffinity = optimalCPUaffinity()
+
+        infoPassing.miningInAndroid.notificationLoaderClass = NotificationGetter::class.java
+        infoPassing.minerOutput.isBasicLogging = true
 
         Log.d(javaClass.simpleName, "startMineService")
-        infoPassing.startMiningService()
+        infoPassing.saveState()
+        Handler().postDelayed({infoPassing.startMiningService()}, 1 * 20 * 100)
+
     }
 
     private fun stopMining() {
@@ -342,7 +336,42 @@ class MainActivity : AppCompatActivity() {
         updateOutputInfo(false)
     }
 
-    //recommended but if not done and the activity is running, the service will be less likely to be killed
+    fun optimalCPUaffinity(): String {
+        val cores = infoPassing.availableCores
+        var optimalBinary: Long = 0
+        if (cores == 8) {
+            /**
+             * this means - use core 5,6,7 and 8
+             * 0 - don't use, 1 - use
+             * read from right to left
+             */
+            optimalBinary = 11110000
+        } else if (cores == 4) {
+            /**
+             * this means - use core 3,4
+             * 0 - don't use, 1 - use
+             * read from right to left
+             */
+            optimalBinary = 1100
+        }
+        return convertBinaryToDecimal(optimalBinary).toString()
+    }
+
+    private fun convertBinaryToDecimal(numIn: Long): Int {
+        var num = numIn
+        var decimalNumber = 0
+        var i = 0
+        var remainder: Long
+
+        while (num.toInt() != 0) {
+            remainder = num % 10
+            num /= 10
+            decimalNumber += (remainder * Math.pow(2.0, i.toDouble())).toInt()
+            ++i
+        }
+        return decimalNumber
+    }
+
     override fun onDestroy() {
         mineConnector?.detach()
         super.onDestroy()
