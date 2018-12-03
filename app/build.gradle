@@ -12,8 +12,8 @@ android {
         applicationId 'tuev.co.monerominer'
         minSdkVersion 17
         targetSdkVersion 28
-        versionCode 4
-        versionName "4"
+        versionCode 5
+        versionName "5"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         multiDexEnabled true
 
@@ -45,10 +45,10 @@ dependencies {
     }
 
     //This version of the TUmine Monero .aar library contains native miner with SSL support. -> THE MINER HAS BIGGER SIZE (contains openssl)
-    //implementation 'tuev.co:tumine:6.0-ssl'
+    //implementation 'tuev.co:tumine:7.0-ssl'
 
     //This version of the TUmine Monero .aar library contains native miner WITHOUT SSL support.
-    //implementation 'tuev.co:tumine:6.0-basic'
+    //implementation 'tuev.co:tumine:7.0-basic'
 }
 repositories {
     mavenCentral()
