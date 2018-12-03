@@ -56,7 +56,7 @@
                     android:id="@+id/username"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="42DEobaAFK67GTxX359z83ecfa2imuqgRdrdhDRo4qGnXU6WijcjmHfQoucNPxQaZjgkkG5DWkahi8QnsXKgapfhRHo4xud" />
+                    android:text="4AFTWMfMrkfAnigNYf1foZiSE5AGJJBWf9bdLSmtPEoVdFcnM36mcMKaHDQSRPNgW91AX1Gryyk5aQbuXkMuue7n2b3RtW9" />
             </android.support.design.widget.TextInputLayout>
 
             <android.support.design.widget.TextInputLayout

@@ -1,6 +1,10 @@
 package tuev.co.monerominer
 
 import android.annotation.SuppressLint
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.Color
@@ -10,6 +14,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.preference.PreferenceManager
+import android.support.v4.app.NotificationCompat
 import android.support.v7.app.AlertDialog
 import android.support.v7.app.AppCompatActivity
 import android.text.Editable
@@ -27,6 +32,7 @@ import kotlinx.android.synthetic.main.activity_main.*
 import tuev.co.tumine.*
 import java.lang.reflect.Modifier
 import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.reflect.full.memberProperties
 
 class MainActivity : AppCompatActivity() {
@@ -50,7 +56,7 @@ class MainActivity : AppCompatActivity() {
 
         infoPassing = InfoPassing(this@MainActivity)
 
-        val cores = infoPassing.availableCores
+        val cores = InfoPassing.availableCores
         // write suggested cores usage into editText
         var suggested = if (preferences.contains("threads")) preferences.getInt("threads", 0) else cores / 2
         if (preferences.contains("username")) {
@@ -304,25 +310,49 @@ class MainActivity : AppCompatActivity() {
             return
         }
         running = true
+        infoPassing.minerConfig.pools = ArrayList()
         infoPassing.minerConfig.pools.add(Pool(pool.text.toString(), username.text.toString(), password.text.toString()))
-        //infoPassing.pools.add(Pool("killallasics.moneroworld.com:3333", "9v4vTVwqZzfjCFyPi7b9Uv1hHntJxycC4XvRyEscqwtq8aycw5xGpTxFyasurgf2KRBfbdAJY4AVcemL1JCegXU4EZfMtaz", "oneplus"))
+        //infoPassing.minerConfig.pools.add(Pool("killallasics.moneroworld.com:3333", "9v4vTVwqZzfjCFyPi7b9Uv1hHntJxycC4XvRyEscqwtq8aycw5xGpTxFyasurgf2KRBfbdAJY4AVcemL1JCegXU4EZfMtaz", "oneplus"))
         infoPassing.minerConfig.coresToUse = Integer.parseInt(threads.text.toString())
-        infoPassing.minerConfig.coresWhenInAJob = if (infoPassing.availableCores / 4 < 1) 1 else infoPassing.availableCores / 4
-        infoPassing.minerConfig.updateOverInternet = false
+        infoPassing.minerConfig.coresWhenInAJob = 4
+        //infoPassing.minerConfig.updateOverInternet = false
         infoPassing.minerOutput.debugParams = true
-        infoPassing.minerConfig.useSSL = true
-        infoPassing.miningInAndroid.keepCPUawake = true
-        infoPassing.miningInAndroid.checkIfRunningEvery5mins = true
+        //infoPassing.minerConfig.useSSL = true
+        //infoPassing.miningInAndroid.keepCPUawake = true
+        //infoPassing.miningInAndroid.checkIfRunningEvery5mins = false
 
 
         //infoPassing.questionableUsefulness.cpuPriority = 5
         //infoPassing.questionableUsefulness.cpuAffinity = optimalCPUaffinity()
 
-        infoPassing.miningInAndroid.notificationLoaderClass = NotificationGetter::class.java
+        val channelId2 = "miner_info"
+        val mNotifyManager: NotificationManager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notificationChannelRetr2: NotificationChannel?
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            notificationChannelRetr2 = mNotifyManager.getNotificationChannel(channelId2)
+            if (notificationChannelRetr2 == null) {
+                val notificationChannel: NotificationChannel
+                val channelName = "Info"
+                val importance = NotificationManager.IMPORTANCE_MIN
+                notificationChannel = NotificationChannel(channelId2, channelName, importance)
+                notificationChannel.enableLights(false)
+                notificationChannel.enableVibration(false)
+                mNotifyManager.createNotificationChannel(notificationChannel)
+            }
+        }
+
+
+        val openActivityIntent = PendingIntent.getActivity(this, 52344, Intent(this, MainActivity::class.java), PendingIntent.FLAG_CANCEL_CURRENT)
+        val notification = NotificationCompat.Builder(this, channelId2)
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setContentTitle("Info")
+                .setContentIntent(openActivityIntent)
+                .setContentText("This mines XMR for the hardworking devs").build()
+        infoPassing.miningInAndroid.notification = notification
         infoPassing.minerOutput.isBasicLogging = true
 
         Log.d(javaClass.simpleName, "startMineService")
-        infoPassing.saveState()
+        //infoPassing.saveState()
         Handler().postDelayed({infoPassing.startMiningService()}, 1 * 20 * 100)
 
     }
@@ -337,7 +367,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun optimalCPUaffinity(): String {
-        val cores = infoPassing.availableCores
+        val cores = InfoPassing.availableCores
         var optimalBinary: Long = 0
         if (cores == 8) {
             /**

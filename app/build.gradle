@@ -40,7 +40,7 @@ dependencies {
     //TODO: choose which version to use
 
     //This version of the TUmine Monero .aar library doesn't contain native miner. The needed file will be downloaded once.
-    implementation('tuev.co:tumine:6.0-nonative') {
+    implementation('tuev.co:tumine:7.0-nonative') {
         changing true
     }
 
