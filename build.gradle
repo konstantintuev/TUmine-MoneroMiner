@@ -39,6 +39,9 @@ allprojects {
         maven {
             url mavenURL
         }
+        flatDir {
+            dirs 'libs'
+        }
     }
 }
 

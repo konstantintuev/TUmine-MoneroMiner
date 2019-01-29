@@ -165,7 +165,7 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 }
-            }, this, false)
+            }, this, false, true)
         }
     }
 
