@@ -1,4 +1,6 @@
-# Monero Miner for Android
+# Monero Miner for Android - DEPRECATED
+
+# USE [the new java demo app](https://github.com/konstantintuev/TUmine-JavaSampleApp).
 
 # Usage
 
